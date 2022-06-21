@@ -9,10 +9,9 @@ params.epsilon=1e-3;
 params.maxTime=3600;
 runvi(S, params);
 
-%global backupStats
-%backupStats
 
-load('hallwayvi20220620T135853_60_42_converged_72.mat');
+% after execution of runvi(), run this code
+%load('hallwayvi20220620T135853_60_42_converged_72.mat'); % file saved *after* function runvi() completes execution
 close all
 % print runtime
 disp(vi.backupStats.Time{end}-vi.backupStats.startTime)
@@ -30,7 +29,6 @@ for i=1:num_iters
     num_steps_iters(:,i)    = R(:,3);
     disc_rewards_iters(:,i) = R(:,4);
 end
-%R=sampleRewards(vi.backupStats.V{i});
 
 value_vecs = vi.backupStats.V;
 value_vec = vi.backupStats.V{1,end}.v;
