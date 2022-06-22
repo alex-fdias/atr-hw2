@@ -131,7 +131,13 @@ def POMDP_file_parser(fname):
                         start_state_aux = int(line_split[2])
                         
                         line = next(iterator_file_lines)
-                        transition_probab_arr[start_state_aux:start_state_aux+1, :, :] = np.array(line.split(), dtype=float)
+                        
+                        # note: the right side of the array should have dimension 'num_states',
+                        # while the left side has dimension 'num_actions' x 'num_states'
+                        # NumPy does broadcasting (implicit expansion in MATLAB) so that the
+                        # right-side array (row vector) is copied/replicated for the first
+                        # dimension (of size 'num_actions') in the resulting array
+                        transition_probab_arr[start_state_aux, :, :] = np.array(line.split(), dtype=float)
                         
                         del start_state_aux
                     else:
@@ -514,6 +520,7 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
             if episode > 0:
                 print('episode: ', episode, ', policy_diff: ', policy_diff[episode-1], q_fun_rmse[episode-1], q_fun_norm_chng[episode-1])
             else:
+                print('alpha: ' + str(alpha) + ', epsilon: ' + str(eps))
                 print('episode: ', episode)
         
         #if episode > 0:
@@ -576,7 +583,6 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
-    Path(Path.cwd() / plot_output_dir).mkdir(parents=True, exist_ok=True)
     fname_str_aux = plot_output_dir + '/plot_Qlearning_' + \
                     'a=' + '{:.2f}'.format(alpha) + '_' \
                     'e=' + '{:.2f}'.format(eps) + '_' \
@@ -694,6 +700,7 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
             if episode > 0:
                 print('episode: ', episode, ', policy_diff: ', policy_diff[episode-1], q_fun_rmse[episode-1], q_fun_norm_chng[episode-1])
             else:
+                print('alpha: ' + str(alpha) + ', epsilon: ' + str(eps))
                 print('episode: ', episode)
         
         #if episode > 0:
@@ -759,7 +766,6 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
-    Path(Path.cwd() / plot_output_dir).mkdir(parents=True, exist_ok=True)
     fname_str_aux = plot_output_dir + '/plot_Qlearning_' + \
                     'a=' + '{:.2f}'.format(alpha) + '_' \
                     'e=' + '{:.2f}'.format(eps) + '_' \
@@ -850,8 +856,9 @@ def main():
     plot_output_ext = '.pdf'
     
     discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec = POMDP_file_parser('hallway.POMDP')
-    
     goal_states_bool = np.abs(rewards_arr[0, 0, :, 0]-1.0) < 1e-6
+    
+    Path(Path.cwd() / plots_output_dir).mkdir(parents=True, exist_ok=True)
     
     q_value_fun_policyiteration, policy_policyiteration = policy_iteration(
                                               discount_factor       = discount_factor,
@@ -981,6 +988,7 @@ def main():
             if episode > 0:
                 print('episode: ', episode, ', policy_diff: ', policy_diff1[episode-1], q_fun_rmse1[episode-1], q_fun_norm_chng1[episode-1])
             else:
+                print('alpha: ' + str(alpha) + ', epsilon: ' + str(eps))
                 print('episode: ', episode)
         
         #if episode > 0:
@@ -1051,7 +1059,6 @@ def main():
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
-    Path(Path.cwd() / plots_output_dir).mkdir(parents=True, exist_ok=True)
     fname_str_aux = plots_output_dir + '/plot_double_Qlearning_' + \
                     'a=' + '{:.2f}'.format(alpha) + '_' \
                     'e=' + '{:.2f}'.format(eps) + '_' \
