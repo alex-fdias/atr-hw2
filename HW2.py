@@ -114,8 +114,10 @@ def POMDP_file_parser(fname):
                 line = next(iterator_file_lines)
                 line_split = line.split()
                 if len(line_split)!=num_states:
-                    raise ValueError('number of value should equal the number of states')            
+                    raise ValueError('number of splitted values should equal the number of states')
+                    
                 start_probab_vec = np.array(line_split, dtype=float)
+                
             elif line_split[0]=='T':
                 # transition probabilities
                 #print(line_split, len(line_split))
@@ -188,18 +190,25 @@ def POMDP_file_parser(fname):
     # of observing each of the 'num_observations' observations must sum to one
     if np.abs(observation_probab_arr.sum() - np.prod(observation_probab_arr.shape[:2])) > 1e-60:
         raise ValueError('shouldn\'t happen')
+
+    # this checks that the probabilities of starting in each of the 'num_states'
+    # states sum to one
+    if np.abs(start_probab_vec.sum() - 1) > 1e-60:
+        raise ValueError('shouldn\'t happen')
     
     return discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec
 
 def compute_optimal_policy(q_fun, print_flag=False):
     '''
-    Receives an action-value function matrix and returns a corresponding
-    (stochastic) optimal policy    
+    Receives a state-action value function matrix Q(s,a) and returns the
+    corresponding (stochastic) optimal policy; if there is more than one
+    optimal action for a given state, a probability of 1/N is assigned
+    to each of the N optimal actions (equiprobability apportioning scheme)  
 
     Parameters
     ----------
     q_fun : TYPE \\ numpy 2d array
-        action-value function matrix (number of states, number of actions)
+        state-action value function matrix (number of states, number of actions)
     print_flag : TYPE, optional
         Whether to print the optimal policy actions for each state. The default is False.
 
