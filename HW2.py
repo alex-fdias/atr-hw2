@@ -7,8 +7,6 @@ from functools import partial
 
 np.random.seed(42)
 
-# POMDP file specification:
-# http://cs.brown.edu/research/ai/pomdp/examples/pomdp-file-spec.html
 def POMDP_file_parser(fname):
     '''
     POMDP file parser (incomplete, working for file \'hallway.POMDP\')
@@ -45,6 +43,9 @@ def POMDP_file_parser(fname):
         DESCRIPTION.
 
     '''
+
+    # POMDP file specification:
+    # http://cs.brown.edu/research/ai/pomdp/examples/pomdp-file-spec.html
     
     with open(fname, encoding='utf-8') as f:
         # .strip: remove '\n' (new line) and ' ' (whitespace) characters at the end of each line
@@ -107,12 +108,12 @@ def POMDP_file_parser(fname):
                                       )
                 
             elif line_split[0]=='start':
-                # are these the probabilities of starting in each of the num_states states?
+                # probabilities of starting in each of the 'num_states' states
                 
                 # go to next line
                 line = next(iterator_file_lines)
                 line_split = line.split()
-                if len(line_split) != num_states:
+                if len(line_split)!=num_states:
                     raise ValueError('number of value should equal the number of states')            
                 start_probab_vec = np.array(line_split, dtype=float)
             elif line_split[0]=='T':
@@ -177,12 +178,12 @@ def POMDP_file_parser(fname):
     if np.abs(transition_probab_arr.sum() - np.prod(transition_probab_arr.shape[:2])) > 1e-60:
         raise ValueError('shouldn\'t happen')
     
-    # this check that, for each action-(end-)state pair, the probabilities
+    # this checks that, for each action-(end-)state pair, the probabilities
     # of observing each of the 'num_observations' observations must sum to one
     if np.abs(observation_probab_arr.sum() - np.prod(observation_probab_arr.shape[:2])) > 1e-60:
         raise ValueError('shouldn\'t happen')
     
-    return discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr
+    return discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec
 
 def compute_optimal_policy(q_fun, print_flag=False):
     '''
@@ -230,13 +231,15 @@ def compute_optimal_policy(q_fun, print_flag=False):
 def compute_policy_diff(policy_1, policy_2):
     return np.abs(policy_1 - policy_2).sum()/2
 
-def policy_iteration(discount_factor, num_states, num_actions, transition_probab_arr, rewards_arr, goal_states_bool, plot_result=True, plot_output_dir='plots', plot_output_fname='plot_policy_iteration', plot_output_ext='.pdf', print_optimal_policy=True, stay_action_policy_initialization=False, equiprobability_policy_initialization=True):
+def print_algorithm_name_message(alg_name_message):
+    print('#'*(6+len(alg_name_message)))
+    print('## ' + alg_name_message + ' ##')
+    print('#'*(6+len(alg_name_message)))
 
-    print('######################')
-    print('## Policy Iteration ##')
-    print('######################')
-    policy_policyiteration      = np.empty(shape=(num_states,num_actions))
+def policy_iteration(discount_factor, num_states, num_actions, transition_probab_arr, rewards_arr, start_probab_vec, goal_states_bool, plot_result=True, plot_output_dir='plots', plot_output_fname='plot_policy_iteration', plot_output_ext='.pdf', print_optimal_policy=True, stay_action_policy_initialization=False, equiprobability_policy_initialization=True):
+    print_algorithm_name_message('Policy Iteration')
     
+    policy_policyiteration = np.empty(shape=(num_states,num_actions))
     if stay_action_policy_initialization:
         policy_policyiteration[:,0 ] = 1.0
         policy_policyiteration[:,1:] = 0.0
@@ -327,11 +330,9 @@ def policy_iteration(discount_factor, num_states, num_actions, transition_probab
         
     return q_fun_aux, policy_policyiteration
 
-def value_iteration(discount_factor, num_states, num_actions, transition_probab_arr, rewards_arr, goal_states_bool, policy_ref, plot_result=True, plot_output_dir='plots', plot_output_fname='plot_value_iteration', plot_output_ext='.pdf', print_optimal_policy=True):
-
-    print('#####################')
-    print('## Value Iteration ##')
-    print('#####################')
+def value_iteration(discount_factor, num_states, num_actions, transition_probab_arr, rewards_arr, start_probab_vec, goal_states_bool, policy_ref, plot_result=True, plot_output_dir='plots', plot_output_fname='plot_value_iteration', plot_output_ext='.pdf', print_optimal_policy=True):
+    print_algorithm_name_message('Value Iteration')
+    
     value_fun_vec_ = np.empty(shape=(num_states,), dtype=float)
     value_fun_vec_[ goal_states_bool] = 0
     
@@ -481,11 +482,9 @@ def value_iteration(discount_factor, num_states, num_actions, transition_probab_
     
     return q_value_fun, policy_valueiteration
 
-def q_learning(discount_factor, num_states, num_actions, goal_states_bool, transition_probab_arr, rewards_arr, q_value_fun_ref, policy_ref, plot_output_dir='plots'):
-
-    print('################')
-    print('## Q-learning ##')
-    print('################')
+def q_learning(discount_factor, num_states, num_actions, goal_states_bool, transition_probab_arr, rewards_arr, start_probab_vec, q_value_fun_ref, policy_ref, plot_output_dir='plots'):
+    print_algorithm_name_message('Q-learning')
+    
     q_fun_vec_                 = np.empty(shape=(num_states,num_actions), dtype=float)
     q_fun_vec_[ goal_states_bool,:] = 0
     q_fun_vec_[~goal_states_bool,:] = 0*np.ones(shape=(num_states-goal_states_bool.sum(),1))
@@ -663,11 +662,9 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
                )
     plt.show()
 
-def q_learning_step_history(discount_factor, num_states, num_actions, goal_states_bool, transition_probab_arr, rewards_arr, q_value_fun_ref, policy_ref, plot_output_dir='plots'):
-
-    print('################')
-    print('## Q-learning ##')
-    print('################')
+def q_learning_step_history(discount_factor, num_states, num_actions, goal_states_bool, transition_probab_arr, rewards_arr, start_probab_vec, q_value_fun_ref, policy_ref, plot_output_dir='plots'):
+    print_algorithm_name_message('Q-learning (step history)')
+    
     q_fun_vec_                 = np.empty(shape=(num_states,num_actions), dtype=float)
     q_fun_vec_[ goal_states_bool,:] = 0
     q_fun_vec_[~goal_states_bool,:] = 0*np.ones(shape=(num_states-goal_states_bool.sum(),1))
@@ -852,7 +849,7 @@ def main():
     plots_output_dir = 'plots'
     plot_output_ext = '.pdf'
     
-    discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr = POMDP_file_parser('hallway.POMDP')
+    discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec = POMDP_file_parser('hallway.POMDP')
     
     goal_states_bool = np.abs(rewards_arr[0, 0, :, 0]-1.0) < 1e-6
     
@@ -862,6 +859,7 @@ def main():
                                               num_actions           = num_actions,
                                               transition_probab_arr = transition_probab_arr,
                                               rewards_arr           = rewards_arr,
+                                              start_probab_vec      = start_probab_vec,
                                               goal_states_bool      = goal_states_bool,
                                               plot_output_dir       = plots_output_dir,
                                               print_optimal_policy  = True,                                              
@@ -883,6 +881,7 @@ def main():
                          num_actions           = num_actions,
                          transition_probab_arr = transition_probab_arr,
                          rewards_arr           = rewards_arr,
+                         start_probab_vec      = start_probab_vec,
                          goal_states_bool      = goal_states_bool,
                          plot_output_dir       = plots_output_dir,
                          print_optimal_policy  = True,
@@ -896,6 +895,7 @@ def main():
                                                                         num_actions           = num_actions,
                                                                         transition_probab_arr = transition_probab_arr,
                                                                         rewards_arr           = rewards_arr,
+                                                                        start_probab_vec      = start_probab_vec,
                                                                         goal_states_bool      = goal_states_bool,
                                                                         policy_ref            = policy_policyiteration,
                                                                         print_optimal_policy  = False, 
@@ -925,6 +925,7 @@ def main():
                goal_states_bool      = goal_states_bool,
                transition_probab_arr = transition_probab_arr,
                rewards_arr           = rewards_arr,
+               start_probab_vec      = start_probab_vec,
                q_value_fun_ref       = q_value_fun_valueiteration,
                policy_ref            = policy_valueiteration,
                plot_output_dir       = plots_output_dir,
@@ -974,9 +975,7 @@ def main():
     cumulative_reward = np.zeros(shape=(num_episodes), dtype=int  )
     q_update_steps    = 1000
     episode_policy_convergence = -1
-    print('#######################')
-    print('## Double Q-learning ##')
-    print('#######################')
+    print_algorithm_name_message('Double Q-learning')
     for episode in range(num_episodes):
         if (episode % 100) == 0:
             if episode > 0:
