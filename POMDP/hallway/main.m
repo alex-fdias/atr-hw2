@@ -10,7 +10,7 @@ num_belief_set_points=1000;
 S=sampleBeliefs(num_belief_set_points);
 
 % declare struct 'params' with fields 'epsilon' and 'maxTime'
-params.epsilon=1e-6;
+params.epsilon=1e-3;
 params.maxTime=3600;
 runvi(S, params);
 
