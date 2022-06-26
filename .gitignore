@@ -1,2 +1,12 @@
 *.bak
+# LaTeX intermediate/auxiliary files
+*.aux
+*.bbl
+*.blg
+*.log
+*.synctex.gz
+# end LaTeX file extensions
 plots
+# MATLAB
+*.POMDP.mat
+hallwayvi*.mat

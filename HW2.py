@@ -1,11 +1,12 @@
 import numpy             as np
 import matplotlib.pyplot as plt
 
-from pathlib   import Path
-from functools import partial
+from pathlib         import Path
+from functools       import partial
+from time            import time
+from matplotlib.text import Text
+from scipy.io        import loadmat
 
-
-np.random.seed(42)
 
 def POMDP_file_parser(fname):
     '''
@@ -250,6 +251,28 @@ def print_algorithm_name_message(alg_name_message):
     print('#'*(6+len(alg_name_message)))
     print('## ' + alg_name_message + ' ##')
     print('#'*(6+len(alg_name_message)))
+
+def compute_episode_xticklabels_time(episodes, episodes_time_elapsed, xticks, episode_max):
+    # https://www.google.com/search?q=numpy+find+multiple+values+in+array
+    # https://stackoverflow.com/questions/48159608/find-index-of-multiple-elements-in-numpy-array
+    # https://stackoverflow.com/questions/33678543/finding-indices-of-matches-of-one-array-in-another-array
+
+    # construct time xtick labels array
+    xticks_int = xticks.astype(int)
+    time_xticklabels = []
+    for idx,val in enumerate(xticks_int):
+        try:
+            if val<0:
+                time_val = -np.round(episodes_time_elapsed[-val-1],decimals=3)
+            elif val==0:
+                time_val = 0
+            else:
+                time_val = np.round(episodes_time_elapsed[val-1],decimals=3)
+            time_xticklabels.append(Text(xticks[idx], 1, '{:.2f}'.format(time_val)))
+        except IndexError:
+            time_xticklabels.append(Text(xticks[idx], 1, ''))
+
+    return time_xticklabels
 
 def policy_iteration(discount_factor, num_states, num_actions, transition_probab_arr, rewards_arr, start_probab_vec, goal_states_bool, plot_result=True, plot_output_dir='plots', plot_output_fname='plot_policy_iteration', plot_output_ext='.pdf', print_optimal_policy=True, stay_action_policy_initialization=False, equiprobability_policy_initialization=True):
     print_algorithm_name_message('Policy Iteration')
@@ -524,6 +547,8 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     cumulative_reward = np.zeros(shape=(num_episodes), dtype=int )
     q_update_steps    = 1000
     episode_policy_convergence = -1
+    time_start = time()
+    time_elapsed = np.empty(shape=(num_episodes), dtype=type(time_start))
     for episode in range(num_episodes):
         if (episode % 100) == 0:
             if episode > 0:
@@ -562,7 +587,9 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
             
             if state_next in goal_states_nums:
                 # goal state reached, mark success and end episode
-                successes[episode] = 1
+                successes[episode]    = 1
+                time_elapsed[episode] = time()
+                #print(time_elapsed[episode])
                 break
             
             state_curr = state_next
@@ -587,8 +614,10 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
         episode_policy_convergence_flag = True
         episode_policy_convergence = episode+1
     
-    
-    
+    time_elapsed -= time_start
+
+
+
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
@@ -614,11 +643,25 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     axs[1].set_ylabel('Q RMSE (log$_{10}$)')
     
     axs[2].plot(episodes, np.log10(q_fun_norm_chng[:episode_policy_convergence]))
+    axs[2].set_xlabel('episode')
     axs[2].set_ylabel('Q norm chng (log$_{10}$)')
     
-    axs[3].plot(episodes, steps[:episode_policy_convergence], label=r'total=' + str(steps[:episode_policy_convergence].sum()))
+    axs[3].plot(episodes, steps[:episode_policy_convergence], label=r'convergence steps: ' + str(steps[:episode_policy_convergence].sum()))
+    axs[3].set_xlabel('episodes total time (s)')
     axs[3].set_ylabel('steps')
     axs[3].legend(loc='upper right')
+
+    #ax2 = axs[3].twiny()
+    #ax2.set_xticks(axs[3].get_xticks())
+    #ax2.set_xlim(axs[3].get_xlim()) # *must* go *after* setting xticks, and not before
+    
+    time_xticklabels = compute_episode_xticklabels_time(
+                                              np.arange(1, num_episodes+1, 1),
+                                              time_elapsed,
+                                              axs[3].get_xticks(),
+                                              episode_policy_convergence,
+                                             )
+    axs[3].set_xticklabels(time_xticklabels)
     
     #axs[4].plot(episodes, successes[:episode_policy_convergence], label='successes')
     #axs[4].set_xlabel('episode')
@@ -653,19 +696,26 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     axs[1].set_ylabel('Q RMSE (log$_{10}$)')
 
     axs[2].plot(episodes, np.log10(q_fun_norm_chng))
+    axs[2].set_xlabel('episode')
     axs[2].set_ylabel('Q norm chng (log$_{10}$)')
 
-    axs[3].plot(episodes                             , steps                             , label=r'total: '       + str(steps.sum())                             )
+    axs[3].plot(episodes                             , steps                             , label=r'total steps: ' + str(steps.sum())                             )
     axs[3].plot(episodes[:episode_policy_convergence], steps[:episode_policy_convergence], label=r'convergence: ' + str(steps[:episode_policy_convergence].sum()))
-    axs[3].set_xlabel('episode')
+    axs[3].set_xlabel('episodes total time (s)')
     axs[3].set_ylabel('steps')
     axs[3].legend(loc='upper right')
     
-    #axs[3].plot(episodes, successes, label='successes')
-    #axs[3].set_xlabel('episode')
-    #axs[3].set_ylabel(r'success')
-    #axs[3].plot(episodes, successes.cumsum()/num_episodes, label='successes (cum., rel.)', color='tab:red')
-    #axs[3].legend(loc='lower right')
+    #ax2 = axs[3].twiny()
+    #ax2.set_xticks(axs[3].get_xticks())
+    #ax2.set_xlim(axs[3].get_xlim()) # *must* go *after* setting xticks, and not before
+    
+    time_xticklabels = compute_episode_xticklabels_time(
+                                              np.arange(1, num_episodes+1, 1),
+                                              time_elapsed,
+                                              axs[3].get_xticks(),
+                                              num_episodes,
+                                             )
+    axs[3].set_xticklabels(time_xticklabels)
     
     fig.tight_layout()
     plt.savefig(
@@ -799,7 +849,7 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     axs[2].plot(episodes, np.log10(q_fun_norm_chng[:episode_policy_convergence]))
     axs[2].set_ylabel('Q norm chng (log$_{10}$)')
     
-    axs[3].plot(episodes, steps[:episode_policy_convergence], label=r'total=' + str(steps[:episode_policy_convergence].sum()))
+    axs[3].plot(episodes, steps[:episode_policy_convergence], label=r'convergence steps: ' + str(steps[:episode_policy_convergence].sum()))
     axs[3].set_ylabel('steps')
     axs[3].legend(loc='upper right')
     
@@ -838,7 +888,7 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     axs[2].plot(episodes, np.log10(q_fun_norm_chng))
     axs[2].set_ylabel('Q norm chng (log$_{10}$)')
 
-    axs[3].plot(episodes                             , steps                             , label=r'total: '       + str(steps.sum())                             )
+    axs[3].plot(episodes                             , steps                             , label=r'total steps: ' + str(steps.sum())                             )
     axs[3].plot(episodes[:episode_policy_convergence], steps[:episode_policy_convergence], label=r'convergence: ' + str(steps[:episode_policy_convergence].sum()))
     axs[3].set_xlabel('episode')
     axs[3].set_ylabel('steps')
@@ -861,11 +911,14 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     plt.show()
     
 def main():
+    np.random.seed(42)
+    
     plots_output_dir = 'plots'
     plot_output_ext = '.pdf'
     
     discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec = POMDP_file_parser('hallway.POMDP')
     goal_states_bool = np.abs(rewards_arr[0, 0, :, 0]-1.0) < 1e-6
+    num_nongoal_states = num_states-goal_states_bool.sum()
     
     Path(Path.cwd() / plots_output_dir).mkdir(parents=True, exist_ok=True)
     
@@ -917,6 +970,32 @@ def main():
                                                                         print_optimal_policy  = False, 
                                                                        )
     
+    # plot Perseus POMDP toolbox results and compare with Value Iteration
+    matfile_data = loadmat(str(Path.cwd() / 'POMDP' / 'hallway' / 'disc_rewards_iters_startState_1000.mat'))
+    matfile_arr  = matfile_data['disc_rewards_iters_startState']
+    
+    val_fun_valueiteration = q_value_fun_valueiteration.max(axis=1)
+    num_subplots = 2
+    fig, axs = plt.subplots(num_subplots, 1, figsize=(6,3*num_subplots))
+    boxplot1 = axs[0].boxplot(matfile_arr[:num_nongoal_states//2].T, showfliers=False)
+    valiter1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[:num_nongoal_states//2])
+    axs[0].set_xlim([0, num_nongoal_states//2+1])
+    axs[0].set_ylim([0, 1])
+    axs[0].set_ylabel('value function')
+    axs[0].set_xlabel('state')
+    #axs[0].legend(handles=[boxplot1['boxes'][0],valiter1[0]], labels=['no. runs='+str(matfile_arr.shape[1]),'Value Iteration'])
+    axs[0].legend(handles=[boxplot1['boxes'][0],valiter1[0]], labels=['Perseus','Value Iteration'])
+    #axs[0].legend(handles=[valiter1[0]], labels=['Value Iteration'], loc='upper left')
+    axs[1].boxplot(matfile_arr[num_nongoal_states//2:].T, showfliers=False)
+    axs[1].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[num_nongoal_states//2:num_nongoal_states])
+    axs[1].set_xlim([0, num_nongoal_states//2+1])
+    axs[1].set_ylim([0,1])
+    axs[1].set_ylabel('value function')
+    axs[1].set_xlabel('state')
+    #axs[1].legend(handles=[boxplot2['boxes'][0],valiter2[0]], labels=['box plot','Value Iteration'])
+    axs[1].set_xticklabels(np.arange(num_nongoal_states//2+1, num_nongoal_states+1))
+    plt.show()
+        
     # why are the action-value functions Q(s,a) not the same for
     # Policy Iteration and Value Iteration, except for the optimal
     # action in each state?
@@ -947,7 +1026,7 @@ def main():
                plot_output_dir       = plots_output_dir,
               )
     
-    raise ValueError    
+    raise ValueError
     
     
     #######################
@@ -1097,7 +1176,7 @@ def main():
     axs[2].plot(episodes, np.log10(q_fun_norm_chng2[:episode_policy_convergence]), label='2')
     axs[2].set_ylabel('Q norm chng (log$_{10}$)')
     
-    axs[3].plot(episodes, steps[:episode_policy_convergence], label=r'total=' + str(steps[:episode_policy_convergence].sum()))
+    axs[3].plot(episodes, steps[:episode_policy_convergence], label=r'convergence steps: ' + str(steps[:episode_policy_convergence].sum()))
     axs[3].set_ylabel('steps')
     axs[3].legend(loc='upper right')
     
@@ -1137,7 +1216,7 @@ def main():
     axs[1].set_ylabel('Q RMSE (log$_{10}$)')
     axs[1].legend(loc='upper right')
     
-    axs[2].plot(episodes, steps, label=r'total: '       + str(steps.sum())                             )
+    axs[2].plot(episodes, steps, label=r'total steps: ' + str(steps.sum())                             )
     axs[2].plot(episodes, steps, label=r'convergence: ' + str(steps[:episode_policy_convergence].sum()))
     axs[2].set_ylabel('steps')
     axs[2].legend(loc='upper right')
