@@ -197,6 +197,16 @@ def POMDP_file_parser(fname):
     if np.abs(start_probab_vec.sum() - 1) > 1e-60:
         raise ValueError('shouldn\'t happen')
     
+    # this checks that, when transitioning from a specific start state by
+    # taking a certain action, one must necessarily transition to one of the
+    # 'num_states' states with total probability of one, i.e., p(s'|s,a)
+    # must sum to one when s and a are fixed
+    for i in range(num_states):
+        for j in range(num_actions):
+            if np.abs(transition_probab_arr[i,j,:].sum() - 1.0) > 1e-3:
+                print(i,j)
+                raise ValueError('shouldn\'t happen')
+    
     return discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec
 
 def compute_optimal_policy(q_fun, print_flag=False):
@@ -278,6 +288,7 @@ def policy_iteration(discount_factor, num_states, num_actions, transition_probab
     print_algorithm_name_message('Policy Iteration')
     
     policy_policyiteration = np.empty(shape=(num_states,num_actions))
+    stay_action_policy_initialization = True
     if stay_action_policy_initialization:
         policy_policyiteration[:,0 ] = 1.0
         policy_policyiteration[:,1:] = 0.0
@@ -290,13 +301,15 @@ def policy_iteration(discount_factor, num_states, num_actions, transition_probab
     policy_policyiteration_prev      = np.empty(shape=(num_states,num_actions))
     policy_policyiteration_prev[...] = policy_policyiteration[...]
     
-    zeros_initialization = False
-    if not zeros_initialization:
+    fixed_value_initialization = False
+    #discount_factor=1.0
+    # Important: do NOT initialize 'value_fun_vec' to all zeros
+    if not fixed_value_initialization:
         value_fun_vec                    = np.empty(shape=(num_states), dtype=float)
         value_fun_vec[ goal_states_bool] = 0
         value_fun_vec[~goal_states_bool] = np.random.random(size=(num_states-goal_states_bool.sum(),))
     else:
-        value_fun_vec                    = np.zeros(shape=(num_states), dtype=float)
+        value_fun_vec                    = 0.5*np.ones(shape=(num_states), dtype=float)
     
     
     value_fun_vec_new                = np.empty(shape=(num_states), dtype=float)
@@ -971,29 +984,35 @@ def main():
                                                                        )
     
     # plot Perseus POMDP toolbox results and compare with Value Iteration
-    matfile_data = loadmat(str(Path.cwd() / 'POMDP' / 'hallway' / 'disc_rewards_iters_startState_1000.mat'))
-    matfile_arr  = matfile_data['disc_rewards_iters_startState']
+    matfile_data     = loadmat(str(Path.cwd() / 'POMDP' / 'hallway' / 'disc_rewards_iters_startState_1000.mat'))
+    matfile_arr      = matfile_data['disc_rewards_iters_startState']
+    matfile_arr_mean = matfile_arr.mean(axis=1)
     
     val_fun_valueiteration = q_value_fun_valueiteration.max(axis=1)
     num_subplots = 2
-    fig, axs = plt.subplots(num_subplots, 1, figsize=(6,3*num_subplots))
-    boxplot1 = axs[0].boxplot(matfile_arr[:num_nongoal_states//2].T, showfliers=False)
+    fig, axs = plt.subplots(num_subplots, 1, figsize=(6,3*num_subplots))    
+    boxplot1 = axs[0].boxplot(matfile_arr[:num_nongoal_states//2].T, showfliers=True)
+    bxpltmean1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), matfile_arr_mean[:num_nongoal_states//2], color='tab:green')
     valiter1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[:num_nongoal_states//2])
+    axs[0].set_xticks(np.arange(0, num_nongoal_states//2+1, 4))
+    axs[0].set_xticklabels(np.arange(0, num_nongoal_states//2+1, 4))
     axs[0].set_xlim([0, num_nongoal_states//2+1])
     axs[0].set_ylim([0, 1])
     axs[0].set_ylabel('value function')
     axs[0].set_xlabel('state')
     #axs[0].legend(handles=[boxplot1['boxes'][0],valiter1[0]], labels=['no. runs='+str(matfile_arr.shape[1]),'Value Iteration'])
-    axs[0].legend(handles=[boxplot1['boxes'][0],valiter1[0]], labels=['Perseus','Value Iteration'])
+    axs[0].legend(handles=[boxplot1['boxes'][0],bxpltmean1[0],valiter1[0]], labels=['Perseus','Perseus (mean)','Value Iteration'])
     #axs[0].legend(handles=[valiter1[0]], labels=['Value Iteration'], loc='upper left')
-    axs[1].boxplot(matfile_arr[num_nongoal_states//2:].T, showfliers=False)
+    axs[1].boxplot(matfile_arr[num_nongoal_states//2:].T, showfliers=True)
+    axs[1].plot(np.arange(1, num_nongoal_states//2+1), matfile_arr_mean[num_nongoal_states//2:], color='tab:green')
     axs[1].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[num_nongoal_states//2:num_nongoal_states])
     axs[1].set_xlim([0, num_nongoal_states//2+1])
     axs[1].set_ylim([0,1])
     axs[1].set_ylabel('value function')
     axs[1].set_xlabel('state')
     #axs[1].legend(handles=[boxplot2['boxes'][0],valiter2[0]], labels=['box plot','Value Iteration'])
-    axs[1].set_xticklabels(np.arange(num_nongoal_states//2+1, num_nongoal_states+1))
+    axs[1].set_xticks(np.arange(0, num_nongoal_states//2+1, 4))
+    axs[1].set_xticklabels(np.arange(num_nongoal_states//2, num_nongoal_states+1, 4))
     plt.show()
         
     # why are the action-value functions Q(s,a) not the same for
