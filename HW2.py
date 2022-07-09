@@ -370,11 +370,10 @@ def policy_iteration(discount_factor, num_states, num_actions, transition_probab
         axs.legend(loc='upper right')
         
         fig.tight_layout()
+        if isinstance(plot_output_dir,str):
+            plot_output_dir = Path(Path.cwd() / plot_output_dir)
         plt.savefig(
-                    fname = plot_output_dir + \
-                            '/' + \
-                            plot_output_fname + \
-                            plot_output_ext,
+                    fname = plot_output_dir / (plot_output_fname + plot_output_ext),
                     format = 'pdf',
                    )
         plt.show()
@@ -521,11 +520,10 @@ def value_iteration(discount_factor, num_states, num_actions, transition_probab_
     
     
         fig.tight_layout()
+        if isinstance(plot_output_dir,str):
+            plot_output_dir = Path(Path.cwd() / plot_output_dir)
         plt.savefig(
-                    fname = plot_output_dir + \
-                            '/' + \
-                            plot_output_fname + \
-                            plot_output_ext,
+                    fname = plot_output_dir / (plot_output_fname + plot_output_ext),
                     format = 'pdf',
                    )
         plt.show()
@@ -634,7 +632,7 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
-    fname_str_aux = plot_output_dir + '/plot_Qlearning_' + \
+    fname_str_aux = 'plot_Qlearning_' + \
                     'a=' + '{:.2f}'.format(alpha) + '_' \
                     'e=' + '{:.2f}'.format(eps) + '_' \
                     'min=' + '{:.2f}'.format(policy_diff.min()) + '_'
@@ -683,11 +681,10 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     #axs[4].legend(loc='lower right')
     
     fig.tight_layout()
+    if isinstance(plot_output_dir,str):
+        plot_output_dir = Path(Path.cwd() / plot_output_dir)
     plt.savefig(
-                fname = fname_str_aux + \
-                        'episode_' + \
-                        format_str.format(episode_policy_convergence) + \
-                        '.pdf',
+                fname = plot_output_dir / (fname_str_aux + 'episode_' + format_str.format(episode_policy_convergence) + plot_output_ext),
                 format = 'pdf',
                )
     plt.show()
@@ -731,11 +728,10 @@ def q_learning(discount_factor, num_states, num_actions, goal_states_bool, trans
     axs[3].set_xticklabels(time_xticklabels)
     
     fig.tight_layout()
+    if isinstance(plot_output_dir,str):
+        plot_output_dir = Path(Path.cwd() / plot_output_dir)
     plt.savefig(
-                fname = fname_str_aux + \
-                        'episodes_' + \
-                        format_str.format(num_episodes) + \
-                        '.pdf',
+                fname = plot_output_dir / (fname_str_aux + 'episode_' + format_str.format(num_episodes) + plot_output_ext),
                 format = 'pdf',
                )
     plt.show()
@@ -838,7 +834,7 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
-    fname_str_aux = plot_output_dir + '/plot_Qlearning_' + \
+    fname_str_aux = 'plot_Qlearning_' + \
                     'a=' + '{:.2f}'.format(alpha) + '_' \
                     'e=' + '{:.2f}'.format(eps) + '_' \
                     'min=' + '{:.2f}'.format(policy_diff.min()) + '_'
@@ -873,14 +869,14 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     #axs[4].legend(loc='lower right')
     
     fig.tight_layout()
+    if isinstance(plot_output_dir,str):
+        plot_output_dir = Path(Path.cwd() / plot_output_dir)
     plt.savefig(
-                fname = fname_str_aux + \
-                        'episode_' + \
-                        format_str.format(episode_policy_convergence) + \
-                        '.pdf',
+                fname = plot_output_dir / (fname_str_aux + 'episode_' + format_str.format(episode_policy_convergence) + plot_output_ext),
                 format = 'pdf',
                )
     plt.show()
+
     
     
     episodes = np.arange(1, num_episodes+1, 1)
@@ -914,26 +910,26 @@ def q_learning_step_history(discount_factor, num_states, num_actions, goal_state
     #axs[3].legend(loc='lower right')
     
     fig.tight_layout()
+    if isinstance(plot_output_dir,str):
+        plot_output_dir = Path(Path.cwd() / plot_output_dir)
     plt.savefig(
-                fname = fname_str_aux + \
-                        'episodes_' + \
-                        format_str.format(num_episodes) + \
-                        '.pdf',
+                fname = plot_output_dir / (fname_str_aux + 'episodes_' + format_str.format(num_episodes) + plot_output_ext),
                 format = 'pdf',
                )
     plt.show()
+
     
 def main():
     np.random.seed(42)
     
-    plots_output_dir = 'plots'
+    plots_output_dir = Path(Path.cwd() / 'written_report' / 'plots')
     plot_output_ext = '.pdf'
     
     discount_factor, num_states, num_actions, num_observations, transition_probab_arr, observation_probab_arr, rewards_arr, start_probab_vec = POMDP_file_parser('hallway.POMDP')
     goal_states_bool = np.abs(rewards_arr[0, 0, :, 0]-1.0) < 1e-6
     num_nongoal_states = num_states-goal_states_bool.sum()
     
-    Path(Path.cwd() / plots_output_dir).mkdir(parents=True, exist_ok=True)
+    plots_output_dir.mkdir(parents=True, exist_ok=True)
     
     q_value_fun_policyiteration, policy_policyiteration = policy_iteration(
                                               discount_factor       = discount_factor,
@@ -1009,18 +1005,19 @@ def main():
 
         belief_size_log10_list.append(np.log10(matfile_data['belief_size']))
         timevi_log10_list.append(np.log10(matfile_data['time_vi']))
+        print((matfile_data['successes'].sum(axis=1)/1000).sum()/num_nongoal_states)
 
     axs[0].plot(states_, q_value_fun_policyiteration.max(axis=1)[:num_nongoal_states], label='exact (MDP)')
     axs[0].set_xlabel('state')
     axs[0].set_ylabel('value function approximation')
     axs[0].set_xticks(np.arange(0, (num_states-goal_states_bool.sum())+1, step=4))  # Set label locations.
     axs[0].set_xlim([0, (num_states-goal_states_bool.sum())])
-    axs[0].set_ylim([0.20, 1.00])
+    axs[0].set_ylim([0.00, 1.00])
     axs[0].legend(loc='upper right')
 
     axs[1].plot(belief_size_log10_list, timevi_log10_list, marker='s')
-    axs[1].set_xlabel('belief points set size (log10)')
-    axs[1].set_ylabel('value iteration time (s, log10)')
+    axs[1].set_xlabel('belief points set size (log$_{10}$)')
+    axs[1].set_ylabel('value iteration time ($s$, log$_{10}$)')
     #axs[1].set_xticks(np.arange(0, (num_states-goal_states_bool.sum())+1, step=4))  # Set label locations.
     #axs[1].set_xlim([0, (num_states-goal_states_bool.sum())])
     #axs[1].set_ylim([0.20, 1.00])
@@ -1028,10 +1025,7 @@ def main():
 
     fig.tight_layout()
     plt.savefig(
-                fname = plot_output_dir + \
-                        '/' + \
-                        plot_output_fname + \
-                        plot_output_ext,
+                fname = plot_output_dir / (plot_output_fname + plot_output_ext),
                 format = 'pdf',
                )
     plt.show()
@@ -1047,6 +1041,7 @@ def main():
                                                                         start_probab_vec      = start_probab_vec,
                                                                         goal_states_bool      = goal_states_bool,
                                                                         policy_ref            = policy_policyiteration,
+                                                                        plot_output_dir       = plots_output_dir,
                                                                         print_optimal_policy  = False, 
                                                                        )
     
@@ -1232,7 +1227,7 @@ def main():
     # plots
     format_str = "{:0" + str(np.floor(np.log10(num_episodes)).astype(int)+1) + "d}"
     
-    fname_str_aux = plots_output_dir + '/plot_double_Qlearning_' + \
+    fname_str_aux = 'plot_double_Qlearning_' + \
                     'a=' + '{:.2f}'.format(alpha) + '_' \
                     'e=' + '{:.2f}'.format(eps) + '_' \
                     'min=' + '{:.2f}'.format(policy_diff1.min()) + '_'
@@ -1273,10 +1268,7 @@ def main():
     
     fig.tight_layout()
     plt.savefig(
-                fname = fname_str_aux + \
-                        'doubleQ_episode_' + \
-                        format_str.format(episode_policy_convergence) + \
-                        '.png',
+                fname = plots_output_dir / (fname_str_aux + 'doubleQ_episode_' + format_str.format(episode_policy_convergence) + '.png'),
                 format = 'png',
                )
     plt.show()
@@ -1314,10 +1306,7 @@ def main():
     
     fig.tight_layout()
     plt.savefig(
-                fname = fname_str_aux + \
-                        'episodes_' + \
-                        format_str.format(num_episodes) + \
-                        '.png',
+                fname = plots_output_dir / (fname_str_aux + 'episodes_' + format_str.format(num_episodes) + '.png'),
                 format = 'png',
                )
     plt.show()
