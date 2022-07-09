@@ -971,6 +971,73 @@ def main():
                          plot_result           = False,
                         )
 
+
+    # plot Perseus POMDP toolbox results and compare with Value Iteration
+
+    # find all files starting with 'hallwayvi' in folder 'folder'
+    # for each file, load the necessary structures
+    matfiles_list = [file for file in (Path.cwd() / 'POMDP' / 'hallway').iterdir() if file.name.startswith('hallwayvi') and file.suffix == '.mat']
+    
+    # for each file, load desired data into a dictionary
+    matfiles_extracted_data_dict = dict()
+    for matfile in matfiles_list:
+        # https://stackoverflow.com/questions/48970785/complex-matlab-struct-mat-file-read-by-python
+        matfile_data = loadmat(str(matfile))
+        
+        matfiles_extracted_data_dict[matfile.name] = {
+                                                      'rewards'    : matfile_data['disc_rewards_iters_startState'],
+                                                      'successes'  : matfile_data['successes_iters_StartState'],
+                                                      'belief_size': matfile_data['vi'][0,0]['n'][0,0],
+                                                      'time_vi'    : matfile_data['vi'][0,0]['backupStats'][0,0]['Time'][0,-1][0,0] - matfile_data['vi'][0,0]['backupStats'][0,0]['startTime'][0,0],
+                                                      'time_sims'  : matfile_data['runtimes_sims'][0,0],
+                                                      'epsilon'    : matfile_data['vi'][0,0]['params'][0,0]['epsilon'][0,0],
+                                                     }
+    
+    # plot the results of Perseus value iteration and simulations
+    plot_output_dir   = plots_output_dir
+    plot_output_fname = 'plot_value_iteration_POMDP'
+    plot_output_ext   = '.pdf'
+
+    states_ = np.arange(1,num_states-goal_states_bool.sum()+1)
+    num_subplots = 2
+    fig, axs = plt.subplots(num_subplots, 1, figsize=(6,3*num_subplots))
+    
+    belief_size_log10_list = []
+    timevi_log10_list = []
+    for matfile_data in matfiles_extracted_data_dict.values():
+        axs[0].plot(states_, matfile_data['rewards'].mean(axis=1), label=r'|${\cal B}$|=' + str(10) + r'$^{' + str(np.log10(matfile_data['belief_size'])) +'}$')
+
+        belief_size_log10_list.append(np.log10(matfile_data['belief_size']))
+        timevi_log10_list.append(np.log10(matfile_data['time_vi']))
+
+    axs[0].plot(states_, q_value_fun_policyiteration.max(axis=1)[:num_nongoal_states], label='exact (MDP)')
+    axs[0].set_xlabel('state')
+    axs[0].set_ylabel('value function approximation')
+    axs[0].set_xticks(np.arange(0, (num_states-goal_states_bool.sum())+1, step=4))  # Set label locations.
+    axs[0].set_xlim([0, (num_states-goal_states_bool.sum())])
+    axs[0].set_ylim([0.20, 1.00])
+    axs[0].legend(loc='upper right')
+
+    axs[1].plot(belief_size_log10_list, timevi_log10_list, marker='s')
+    axs[1].set_xlabel('belief points set size (log10)')
+    axs[1].set_ylabel('value iteration time (s, log10)')
+    #axs[1].set_xticks(np.arange(0, (num_states-goal_states_bool.sum())+1, step=4))  # Set label locations.
+    #axs[1].set_xlim([0, (num_states-goal_states_bool.sum())])
+    #axs[1].set_ylim([0.20, 1.00])
+    #axs[1].legend(loc='upper right')
+
+    fig.tight_layout()
+    plt.savefig(
+                fname = plot_output_dir + \
+                        '/' + \
+                        plot_output_fname + \
+                        plot_output_ext,
+                format = 'pdf',
+               )
+    plt.show()
+
+
+
     q_value_fun_valueiteration, policy_valueiteration = value_iteration(
                                                                         discount_factor       = discount_factor,
                                                                         num_states            = num_states,
@@ -983,38 +1050,37 @@ def main():
                                                                         print_optimal_policy  = False, 
                                                                        )
     
-    # plot Perseus POMDP toolbox results and compare with Value Iteration
-    matfile_data     = loadmat(str(Path.cwd() / 'POMDP' / 'hallway' / 'disc_rewards_iters_startState_1000.mat'))
-    matfile_arr      = matfile_data['disc_rewards_iters_startState']
-    matfile_arr_mean = matfile_arr.mean(axis=1)
+    # # XXXXX: this leftover code (outdated, possibly with wrong variable names)
+    # # allows plotting the results of the Perseus toolbox, for a given size of
+    # # the belief points set, agains the results of Value Iteration
+    # val_fun_valueiteration = q_value_fun_valueiteration.max(axis=1)
+    # num_subplots = 2
+    # fig, axs = plt.subplots(num_subplots, 1, figsize=(6,3*num_subplots))    
+    # boxplot1 = axs[0].boxplot(matfile_arr[:num_nongoal_states//2].T, showfliers=True)
+    # bxpltmean1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), matfile_arr_mean[:num_nongoal_states//2], color='tab:green')
+    # valiter1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[:num_nongoal_states//2])
+    # axs[0].set_xticks(np.arange(0, num_nongoal_states//2+1, 4))
+    # axs[0].set_xticklabels(np.arange(0, num_nongoal_states//2+1, 4))
+    # axs[0].set_xlim([0, num_nongoal_states//2+1])
+    # axs[0].set_ylim([0, 1])
+    # axs[0].set_ylabel('value function')
+    # axs[0].set_xlabel('state')
+    # #axs[0].legend(handles=[boxplot1['boxes'][0],valiter1[0]], labels=['no. runs='+str(matfile_arr.shape[1]),'Value Iteration'])
+    # axs[0].legend(handles=[boxplot1['boxes'][0],bxpltmean1[0],valiter1[0]], labels=['Perseus','Perseus (mean)','Value Iteration'])
+    # #axs[0].legend(handles=[valiter1[0]], labels=['Value Iteration'], loc='upper left')
+    # axs[1].boxplot(matfile_arr[num_nongoal_states//2:].T, showfliers=True)
+    # axs[1].plot(np.arange(1, num_nongoal_states//2+1), matfile_arr_mean[num_nongoal_states//2:], color='tab:green')
+    # axs[1].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[num_nongoal_states//2:num_nongoal_states])
+    # axs[1].set_xlim([0, num_nongoal_states//2+1])
+    # axs[1].set_ylim([0,1])
+    # axs[1].set_ylabel('value function')
+    # axs[1].set_xlabel('state')
+    # #axs[1].legend(handles=[boxplot2['boxes'][0],valiter2[0]], labels=['box plot','Value Iteration'])
+    # axs[1].set_xticks(np.arange(0, num_nongoal_states//2+1, 4))
+    # axs[1].set_xticklabels(np.arange(num_nongoal_states//2, num_nongoal_states+1, 4))
+    # plt.show()
     
-    val_fun_valueiteration = q_value_fun_valueiteration.max(axis=1)
-    num_subplots = 2
-    fig, axs = plt.subplots(num_subplots, 1, figsize=(6,3*num_subplots))    
-    boxplot1 = axs[0].boxplot(matfile_arr[:num_nongoal_states//2].T, showfliers=True)
-    bxpltmean1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), matfile_arr_mean[:num_nongoal_states//2], color='tab:green')
-    valiter1 = axs[0].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[:num_nongoal_states//2])
-    axs[0].set_xticks(np.arange(0, num_nongoal_states//2+1, 4))
-    axs[0].set_xticklabels(np.arange(0, num_nongoal_states//2+1, 4))
-    axs[0].set_xlim([0, num_nongoal_states//2+1])
-    axs[0].set_ylim([0, 1])
-    axs[0].set_ylabel('value function')
-    axs[0].set_xlabel('state')
-    #axs[0].legend(handles=[boxplot1['boxes'][0],valiter1[0]], labels=['no. runs='+str(matfile_arr.shape[1]),'Value Iteration'])
-    axs[0].legend(handles=[boxplot1['boxes'][0],bxpltmean1[0],valiter1[0]], labels=['Perseus','Perseus (mean)','Value Iteration'])
-    #axs[0].legend(handles=[valiter1[0]], labels=['Value Iteration'], loc='upper left')
-    axs[1].boxplot(matfile_arr[num_nongoal_states//2:].T, showfliers=True)
-    axs[1].plot(np.arange(1, num_nongoal_states//2+1), matfile_arr_mean[num_nongoal_states//2:], color='tab:green')
-    axs[1].plot(np.arange(1, num_nongoal_states//2+1), val_fun_valueiteration[num_nongoal_states//2:num_nongoal_states])
-    axs[1].set_xlim([0, num_nongoal_states//2+1])
-    axs[1].set_ylim([0,1])
-    axs[1].set_ylabel('value function')
-    axs[1].set_xlabel('state')
-    #axs[1].legend(handles=[boxplot2['boxes'][0],valiter2[0]], labels=['box plot','Value Iteration'])
-    axs[1].set_xticks(np.arange(0, num_nongoal_states//2+1, 4))
-    axs[1].set_xticklabels(np.arange(num_nongoal_states//2, num_nongoal_states+1, 4))
-    plt.show()
-        
+    # XXXXX:
     # why are the action-value functions Q(s,a) not the same for
     # Policy Iteration and Value Iteration, except for the optimal
     # action in each state?
