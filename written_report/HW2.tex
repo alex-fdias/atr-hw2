@@ -196,7 +196,42 @@ In this section, the problem at hand is solved in the POMDP framework, i.e., ins
 
 In POMDPs, the (optimal) value function is piecewise linear and convex. Exact value iteration algorithms for POMDPs exist, however the computation of exact solutions for POMDPs is, in general, an intractable problem. For this reason, approximate solution techniques using a sample set of points from the belief space have been devised. Perseus is a randomized point-based approximate value iteration algorithm for solving POMDPs. The algorithm allows approximating the value function with a relatively small number of vectors (relative to the size of the belief points set).
 
-In Table \ref{tab:pomdp_perseus_results}, the results of running the Perseus algorithm and sampling statistics for different belief point set sizes are summarized. The results indicate that even a fairly small number of points of the belief space ($| {\cal B} |=100$, of the order of magnitude of the number of states) is sufficient to provide a good approximation of the value function, with the number of vectors defining such approximation being relatively small ($| V |=36$, one order of magnitude below that of the number of belief space points).
+In Table \ref{tab:pomdp_perseus_results}, the results of running the Perseus algorithm and sampling statistics for different belief points set sizes are summarized. In Fig. \ref{fig:pomdp_perseus_results}, further results of the Perseus algorithm execution and sampling statistics for different belief points set sizes are illustrated. In the upper chart, the state value function approximation, computed as the mean\footnote{The reason for this is the state value function being defined as an expectation, and therefore the mean is an estimate of the expectation.} of the cumulative reward over all the simulation runs per non-goal state, is depicted. The lower chart conveys how the algorithm time complexity varies with the size of the belief points set.
+
+The upper chart of Fig. \ref{fig:pomdp_perseus_results} indicates that even a fairly small belief points set size of $| {\cal B} |=100$ already provides a very good approximation of the value function $V(s)$, with the number of vectors defining such approximation being relatively small ($| V |=36$), while also showing that a size of $| {\cal B} |=10$ is clearly insufficient to attain a good approximation. Naturally, since in the POMDP setting the state is not fully observable and the agent must rely on observations, the value of each state can never exceed that of the MDP setting, and in the problem at hand is typically quite lower than the value in the fully observability case.
+
+Regarding algorithmic complexity, Table~\ref{tab:pomdp_perseus_results} shows that the number of approximating vectors is typically one order of magnitude below that of the belief points set size. The lower chart of Fig.~\ref{fig:pomdp_perseus_results} conveys that an increase of one order of magnitude in the belief points set size translates into a increase of less than one order of magnitude (0.60 to 0.70, in $\log_{10}$ scale) in algorithm execution time, showing that, timewise, the algorithm scales well with the belief points set size.
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{ r r r r r }
+\hline
+\multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Belief points\\ set size, $\log_{10}| {\cal B} |$ \\ \end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Value function\\ vector set size, $| V |$ \\ \end{tabular}} & \multicolumn{1}{c}{Iterations} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Value\\ iteration \\ time (s)\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Success rate\\ \\ (\%)\end{tabular}} \\ \hline
+1       &     9 & 30 & 4  & 73 \\
+2     &   36 & 72 & 13   & 100 \\
+3   & 192 & 94 & 53   & 100 \\
+4 & 706 & 94 & 259 & 100 \\ \hline
+\end{tabular}
+\caption{Execution results of the Perseus algorithm and sampling statistics for different belief points set sizes (convergence criterion of 10\textsuperscript{-3}). The sampling leading to the success rate and discounted cumulative reward metrics was carried out over 1000 runs for each of the 56 non-goal states as start state.}
+\label{tab:pomdp_perseus_results}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\linewidth]{plots/plot_value_iteration_POMDP.pdf}
+\caption{Execution results of the Perseus algorithm and sampling statistics for different belief points set sizes (convergence criterion of 10\textsuperscript{-3}): value function approximation (mean of the cumulative reward over 1000 runs) and algorithm execution time.}
+\label{fig:pomdp_perseus_results}
+\end{figure}
+
+
+\section{Conclusions}
+
+In this homework, experimentations considering full and partial observability in the problem at hand were carried out.
+
+For full observability, the Value Iteration algorithm learned the optimal policy and converged to the optimal value function through backup operations, resorting to the transition model. The Q-learning algorithm learned the optimal policy through experimentation (simulated state transitions), without knowledge of the transition model itself. In Q-learning, there is a clear interplay between the step size $\alpha$ and the amount of exploration provided by the $\varepsilon$-greedy policy behavior in the attainment of the optimal policy. Also, even if convergence is not ensured by the values taken by the step size, convergence can still be achieved. 
+
+For partial observability, the Perseus randomized point-based approximate value iteration algorithm was able to attain successful policies with relatively low computational effort, even lower than that of the tabular methods, proving the merit of approximate methods for the value function based on a sample set of the belief space.
+
 
 \begin{figure}[htbp]
 \centering
@@ -208,31 +243,9 @@ In Table \ref{tab:pomdp_perseus_results}, the results of running the Perseus alg
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=\linewidth]{plots/plot_Qlearning_a=0.02_e=0.70_min=0.00_episodes_50000.pdf}
-\caption{Policy difference $\Delta \pi$, RMSE error of the state-action value function $Q(s,a)$ relative to the optimal state-action value function $Q_{*}(s,a)$, relative change in the state-action value function norm and number of steps required to reach a terminal state in each episode. The hyperparameters $\alpha$ and $\varepsilon$ take values of 0.02 and 0.7, respectively, with $\alpha_n = \alpha$}
+\caption{Policy difference $\Delta \pi$, RMSE error of the state-action value function $Q(s,a)$ relative to the optimal state-action value function $Q_{*}(s,a)$, relative change in the state-action value function norm and number of steps required to reach a terminal state in each episode. The hyperparameters $\alpha$ and $\varepsilon$ take values of 0.02 and 0.7, respectively, with $\alpha_n = \alpha$.}
 \label{fig:q_learning_convergence_not_ensured}
 \end{figure}
-
-\begin{table}[htbp]
-\centering
-\begin{tabular}{ r r r r r r }
-\hline
-\multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Belief points\\ set size, $| {\cal B} |$ \\ \end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Value function\\ vector set size, $| V |$ \\ \end{tabular}} & \multicolumn{1}{c}{Iterations} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Time\\ \\ (s)\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Success rate\\ \\ (\%)\end{tabular}} & \multicolumn{1}{c}{\begin{tabular}[c]{@{}c@{}}Average discounted\\ cumulative reward\\ (5-25-50-75-95 \%)\end{tabular}} \\ \hline
-10       &     9 & 30 & 1.5  & 73.2 & 0.00 - 0.00 - 0.42 - 0.60 - 0.86 \\
-100     &   36 & 72 & 13   & 100   & 0.18 - 0.36 - 0.49 - 0.63 - 0.86 \\
-1000   & 192 & 94 & 64   & 100   & 0.21 - 0.36 - 0.51 - 0.63 - 0.86 \\
-10000 & 706 & 94 & 324 & 100   & 0.18 - 0.36 - 0.51 - 0.65 - 0.86 \\ \hline
-\end{tabular}
-\caption{Execution results of the Perseus algorithm and sampling statistics for different belief point set sizes (convergence criterion of 10\textsuperscript{-3}). The sampling leading to the success rate and discounted cumulative reward metrics was carried out over 10 runs for 100 start states (default option values).}
-\label{tab:pomdp_perseus_results}
-\end{table}
-
-\section{Conclusions}
-
-In this homework, experimentations considering full and partial observability in the problem at hand were carried out.
-
-For full observability, the Value Iteration algorithm learned the optimal policy and converged to the optimal value function through backup operations, resorting to the transition model. The Q-learning algorithm learned the optimal policy through experimentation (simulated state transitions), without knowledge of the transition model itself. In Q-learning, there is a clear interplay between the step size $\alpha$ and the amount of exploration provided by the $\varepsilon$-greedy policy behavior in the attainment of the optimal policy. Also, even if convergence is not ensured by the values taken by the step size, convergence can still be achieved. 
-
-For partial observability, the Perseus randomized point-based approximate value iteration algorithm was able to attain successful policies with relatively low computational effort, even lower than that of the tabular methods, proving the merit of approximate methods for the value function based on a sample set of the belief space.
 
 % falta runtime nas tabelas da Figura 3, Q RMSE and Q norm chng
 
