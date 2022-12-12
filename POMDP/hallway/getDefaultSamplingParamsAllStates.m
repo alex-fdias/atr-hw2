@@ -1,6 +1,6 @@
 function [nrRewardStarts,maxSteps,nrRewardRuns] = ...
     getDefaultSamplingParamsAllStates
-% $Id: getDefaultSamplingParams.m,v 1.1 2004/07/13 13:58:15 mtjspaan Exp $
+% $Id: getDefaultSamplingParamsAllStates.m,v 1.0 2022/06/30 alex-fdias Exp $
 
 global problem
 %nrRewardStarts=100;
